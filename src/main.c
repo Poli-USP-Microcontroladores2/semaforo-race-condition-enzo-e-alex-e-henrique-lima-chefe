@@ -1,138 +1,74 @@
-/*
- * Exemplo demonstrativo de Race Condition no FRDM-KL25Z (Zephyr)
- *
- * Cenário realista: duas threads (producer-like) precisam contar eventos
- * ou amostras e atualizam um contador compartilhado sem usar mutex/atomics.
- * Ambas executam a operação RMW (read-modify-write) sobre `shared_counter`.
- * Uma terceira thread reporta o resultado comparando:
- *    expected_total = local_count_thread1 + local_count_thread2
- * com
- *    shared_counter
- *
- * Se não houver sincronização, atualizações concorrentes se perdem e
- * shared_counter < expected_total — esse é o sinal clássico de Race Condition.
- *
- * Compile para Zephyr (FRDM-KL25Z) e execute. Observe a discrepância.
- */
-
 #include <zephyr/kernel.h>
-#include <zephyr/device.h>
-#include <zephyr/sys/printk.h>
-#include <stdlib.h>
-#include <stdint.h>
+#include <zephyr/logging/log.h>
 
-/* -- parâmetros do teste -- */
-#define INC_ITERATIONS 100000   /* número de incrementos por thread (aumente/diminua conforme necessário) */
-#define REPORT_PERIOD_MS 1000   /* período para imprimir status (ms) */
+LOG_MODULE_REGISTER(biscoito_mutex, LOG_LEVEL_INF);
+#define BISCOITOS_INICIAIS 10
+volatile int biscoitos_no_pote = BISCOITOS_INICIAIS;
+int biscoitos_gustavo = 0;
+int biscoitos_vitor = 0;
+k_tid_t tid_gustavo, tid_vitor;
 
-/* -- recurso compartilhado (intencionalmente sem proteção) -- */
-volatile uint32_t shared_counter = 0;
+// Mutex para proteger o pote
+struct k_mutex pote_mutex;
 
-/* Contadores locais para cada thread (usados como "esperado") */
-volatile uint32_t local_count_t1 = 0;
-volatile uint32_t local_count_t2 = 0;
-
-/* Flags para indicar término das threads incrementadoras */
-volatile bool t1_done = false;
-volatile bool t2_done = false;
-
-/* Thread stacks e objetos (tamanhos adequados para FRDM-KL25Z) */
-K_THREAD_STACK_DEFINE(stack_t1, 1024);
-K_THREAD_STACK_DEFINE(stack_t2, 1024);
-K_THREAD_STACK_DEFINE(stack_report, 1024);
-
-static struct k_thread th_t1_data;
-static struct k_thread th_t2_data;
-static struct k_thread th_report_data;
-
-/* Thread 1: incrementa o contador compartilhado sem sincronização */
-void thread_inc1(void *p1, void *p2, void *p3)
-{
-    uint32_t i;
-    for (i = 0; i < INC_ITERATIONS; ++i) {
-        /* read-modify-write não-atomico INTENCIONAL */
-        uint32_t tmp = shared_counter;  /* lê valor atual */
-        tmp = tmp + 1;                  /* modifica localmente */
-
-        /* força um ponto de yield para aumentar chance de preempção
-         * (aumenta a probabilidade de reproduzir a Race Condition) */
-        k_yield();
-
-        shared_counter = tmp;           /* escreve de volta - possível perda se outra thread escreveu */
-        local_count_t1++;               /* contador local, é apenas informativo */
-    }
-
-    t1_done = true;
-    printk("Thread 1 terminou.\n");
-    return;
-}
-
-/* Thread 2: faz idem (simula segunda tarefa concorrente) */
-void thread_inc2(void *p1, void *p2, void *p3)
-{
-    uint32_t i;
-    for (i = 0; i < INC_ITERATIONS; ++i) {
-        uint32_t tmp = shared_counter;
-        tmp = tmp + 1;
-
-        /* aqui colocamos uma breve espera para variar o padrão de preempção */
-        if ((i & 0xFF) == 0) {
-            k_yield();
-        }
-
-        shared_counter = tmp;
-        local_count_t2++;
-    }
-
-    t2_done = true;
-    printk("Thread 2 terminou.\n");
-    return;
-}
-
-/* Thread report: periodicamente imprime estado observável */
-void thread_report(void *p1, void *p2, void *p3)
-{
+void gustavo_come_biscoitos(void *arg1, void *arg2, void *arg3){
     while (1) {
-        k_msleep(REPORT_PERIOD_MS);
-
-        uint32_t expected = local_count_t1 + local_count_t2;
-        uint32_t actual = shared_counter;
-
-        printk("Relatório: expected(total) = %u, shared_counter = %u (lost = %u)\n",
-               expected, actual, (expected > actual) ? (expected - actual) : 0u);
-
-        /* Se ambas as threads terminaram, imprime resumo final e para */
-        if (t1_done && t2_done) {
-            printk("=== FINAL ===\n");
-            printk("local_count_t1 = %u\n", local_count_t1);
-            printk("local_count_t2 = %u\n", local_count_t2);
-            printk("expected total = %u\n", expected);
-            printk("shared_counter = %u\n", actual);
-            printk("Perda (expected - actual) = %u\n", (expected > actual) ? (expected - actual) : 0u);
-            while (1) {
-                k_msleep(1000);
-            }
+        // Início da região crítica protegida
+        k_mutex_lock(&pote_mutex, K_FOREVER);
+        if (biscoitos_no_pote > 0) {
+            int biscoitos_restantes = biscoitos_no_pote;
+            biscoitos_gustavo++;
+            biscoitos_no_pote = biscoitos_restantes - 1;
+            LOG_INF("GUSTAVO: Peguei um biscoito. Pote tinha: %d, Agora tem: %d",
+                    biscoitos_restantes, biscoitos_no_pote);
+        } else {
+            k_mutex_unlock(&pote_mutex);
+           break;
         }
+        k_mutex_unlock(&pote_mutex);
+        k_msleep(50);
     }
+    LOG_WRN("GUSTAVO: Acabaram os biscoitos! Comi %d", biscoitos_gustavo);
 }
 
-/* main cria as threads com mesma prioridade para maximizar competição */
-void main(void)
-{
-    printk("Demo Race Condition - iniciando\n");
-    printk("Cada thread fará %d incrementos.\n", INC_ITERATIONS);
+void vitor_come_biscoitos(void *arg1, void *arg2, void *arg3){
+    while (1) {
+        k_mutex_lock(&pote_mutex, K_FOREVER);
+        if (biscoitos_no_pote > 0) {
+            int biscoitos_restantes = biscoitos_no_pote;
+            biscoitos_vitor++;
+            biscoitos_no_pote = biscoitos_restantes - 1;
+            LOG_INF("VITOR: Peguei um biscoito. Pote tinha: %d, Agora tem: %d",
+                    biscoitos_restantes, biscoitos_no_pote);
+        } else {
+            k_mutex_unlock(&pote_mutex);
+            break;
+        }
+        k_mutex_unlock(&pote_mutex);
+        k_msleep(50);
+    }
+    LOG_WRN("VITOR: Acabaram os biscoitos! Comi %d", biscoitos_vitor);
+}
 
-    /* Criar thread 1 e 2 com mesma prioridade (teste de competição) */
-    k_thread_create(&th_t1_data, stack_t1, K_THREAD_STACK_SIZEOF(stack_t1),
-                    thread_inc1, NULL, NULL, NULL,
-                    5, 0, K_NO_WAIT);
+#define STACK_SIZE 1024
+K_THREAD_STACK_DEFINE(gustavo_stack, STACK_SIZE);
+K_THREAD_STACK_DEFINE(vitor_stack, STACK_SIZE);
 
-    k_thread_create(&th_t2_data, stack_t2, K_THREAD_STACK_SIZEOF(stack_t2),
-                    thread_inc2, NULL, NULL, NULL,
-                    5, 0, K_NO_WAIT);
+static struct k_thread gustavo_thread;
+static struct k_thread vitor_thread;
 
-    /* Thread de reporte (prioridade menor) */
-    k_thread_create(&th_report_data, stack_report, K_THREAD_STACK_SIZEOF(stack_report),
-                    thread_report, NULL, NULL, NULL,
-                    6, 0, K_NO_WAIT);
+void main(void) {
+    LOG_INF("=== INÍCIO DO EXPERIMENTO (MUTEX) ===");
+
+    // Inicializa o mutex
+    k_mutex_init(&pote_mutex);
+
+    tid_gustavo = k_thread_create(&gustavo_thread, gustavo_stack, K_THREAD_STACK_SIZEOF(gustavo_stack), gustavo_come_biscoitos, NULL, NULL, NULL, 5, 0, K_NO_WAIT);
+    tid_vitor = k_thread_create(&vitor_thread, vitor_stack, K_THREAD_STACK_SIZEOF(vitor_stack), vitor_come_biscoitos, NULL, NULL, NULL, 5, 0, K_NO_WAIT);
+
+    k_thread_join(tid_gustavo, K_FOREVER);
+    k_thread_join(tid_vitor, K_FOREVER);
+
+    LOG_INF("=== RESULTADO FINAL ===");
+    LOG_INF("Total comido: %d (Gustavo=%d, Vitor=%d), Pote restante=%d", biscoitos_gustavo + biscoitos_vitor, biscoitos_gustavo, biscoitos_vitor, biscoitos_no_pote);
 }
