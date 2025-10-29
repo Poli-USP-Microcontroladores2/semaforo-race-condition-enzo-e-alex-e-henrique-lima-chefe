@@ -1,60 +1,25 @@
-# PSI-Microcontroladores2-Aula06
-Atividade: Resolução de Race Condition com Semáforo
+## Comentários iniciáis sobre o código do Alexander que apresenta Race Condition por Henrique Lima:
+O que claramente está causando um comportamento incorreto e inesperado para o desenvolvedor é que o código cria duas threads que acessam a variável compartilhada e global, biscoitos_no_pote sem nenhum tipo de exclusão mútua, que como já sabido leva a inconsistência dos valores. Portanto, ambas as threads podem ler o mesmo valor de  biscoitos_no_pote (ex: 2), dormir (k_msleep(10)) e depois subtrair 1 de forma independente. Isso faz com que dois biscoitos “sumam” de um só valor — ou seja, o total final de biscoitos consumidos pode ser maior que o número inicial. Exemplo de saída observada: 
+GUSTAVO: Peguei um biscoito. Pote tinha: 2, Agora tem: 1
+VITOR: Peguei um biscoito. Pote tinha: 2, Agora tem: 1
+...
+RACE CONDITION DETECTADA!
+Total comido (11) != Biscoitos iniciais (10)
 
-## 🎯 Objetivos da Atividade
-Nesta atividade, os alunos deverão:
-- Retomar o código gerado por IA em atividade anterior que apresenta **condições de corrida (race conditions)**.
-- Trabalhar em **duplas ou trios**, com **avaliação cruzada interna** entre os integrantes do grupo.
-- Aplicar **testes estruturados** com pré-condição, etapas de teste e pós-condição.
-- Demonstrar como o problema de concorrência foi **identificado e resolvido** com uso de semáforo.
+## Momento onde o erro ocorre:
+int biscoitos_restantes = biscoitos_no_pote;
+k_msleep(10);
+biscoitos_no_pote = biscoitos_restantes - 1;
 
-## 🧠 Etapas da Atividade
+Esse delay permite que as duas threads leiam o mesmo valor antes de atualizar o biscoitos_no_pote, portanto é uma janela crítica onde ocorre o race condition.
+## Planejamento de testes antes da correção:
+![Monitor Serial do Erro](race_alex01.png)
 
-### **1️⃣ Revisão do Código Anterior**
-- Cada integrante do grupo deverá **executar o código do colega** que contém a race condition original.
-- Documentar:
-  - O comportamento incorreto observado.
-  - O momento em que o erro ocorre (condição específica, sequência de eventos, etc.).
+## Correção do código:
+Afim de sanar a race condition do presente código implementei o uso de mutex para garantir a exclusão mútua na região crítica usando a API k_mutex do zephyr. O código corrigido se encontra na present branch.
 
-### **2️⃣ Planejamento de Testes**
-Para cada cenário, descreva **três casos de teste** seguindo o formato abaixo:
+## Reexecução dos casos de testes:
+![Monitor Serial do Erro](race_alex02.png)
 
-| Caso de Teste | Pré-condição | Etapas de Teste | Pós-condição Esperada |
-|----------------|---------------|------------------|------------------------|
-| 1 | ... | ... | ... |
-| 2 | ... | ... | ... |
-| 3 | ... | ... | ... |
-
-### **3️⃣ Correção e Reteste**
-- Corrigir o código para **eliminar a race condition**.
-- Reexecutar **os mesmos casos de teste** e registrar:
-  - As mudanças feitas.
-  - O resultado após a correção com evidências (capturas de tela por exemplo).
-
-### **4️⃣ Avaliação Interna (entre colegas do mesmo grupo)**
-Cada integrante deverá:
-1. Executar o código original do colega conforme os testes planejados.
-2. Executar o código corrigido do colega conforme os testes planejados.
-3. Conferir se as condições de corrida foram eliminadas.  
-4. Registrar uma **avaliação curta** (pode ser no final do README):
-   - O que estava errado antes.  
-   - O que mudou com a correção.
-   - Se o comportamento agora é estável.  
-
-## 📦 Entregáveis
-
-No repositório do grupo, incluir:
-1. `README.md` (este arquivo) contendo:
-   - Nome dos integrantes.
-   - Cenário escolhido.
-   - Casos de teste.
-   - Descrição da race condition e da solução.
-   - Avaliação de cada colega.
-2. Código-fonte organizado (considerando um código original e um corrigido por cada integrante):
-   - `codigo_original/`
-   - `codigo_corrigido/`
-3. Evidências (prints, logs, vídeos curtos, etc.) da execução dos testes.
-
----
-
-**Repositório:** entregue via GitHub Classroom (um repositório por grupo) e um PDF do markdown final no Moodle.
+## Conclusão quanto ao código do Alexander:
+O experimento mostrou que partilhar recursos críticos( a variável global, por exemplo) com a ausência de um mecanismo de controle no acesso leva a inconsistências, como foi demonstrado. A aplicação de mutex como mecanismo de sincronização garantiu a integridade dos dados e a previsibilidade da execução, eliminando assim, a race condition observada.
