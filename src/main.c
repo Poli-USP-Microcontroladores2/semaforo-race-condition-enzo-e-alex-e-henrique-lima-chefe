@@ -45,11 +45,16 @@ static struct k_thread th_t1_data;
 static struct k_thread th_t2_data;
 static struct k_thread th_report_data;
 
+K_SEM_DEFINE(contador, 1, 1);
+
 /* Thread 1: incrementa o contador compartilhado sem sincronização */
 void thread_inc1(void *p1, void *p2, void *p3)
 {
     uint32_t i;
+
     for (i = 0; i < INC_ITERATIONS; ++i) {
+        k_sem_take(&contador, K_FOREVER);
+
         /* read-modify-write não-atomico INTENCIONAL */
         uint32_t tmp = shared_counter;  /* lê valor atual */
         tmp = tmp + 1;                  /* modifica localmente */
@@ -59,6 +64,9 @@ void thread_inc1(void *p1, void *p2, void *p3)
         k_yield();
 
         shared_counter = tmp;           /* escreve de volta - possível perda se outra thread escreveu */
+
+        k_sem_give(&contador);
+        
         local_count_t1++;               /* contador local, é apenas informativo */
     }
 
@@ -72,6 +80,8 @@ void thread_inc2(void *p1, void *p2, void *p3)
 {
     uint32_t i;
     for (i = 0; i < INC_ITERATIONS; ++i) {
+        k_sem_take(&contador, K_FOREVER);
+
         uint32_t tmp = shared_counter;
         tmp = tmp + 1;
 
@@ -81,6 +91,9 @@ void thread_inc2(void *p1, void *p2, void *p3)
         }
 
         shared_counter = tmp;
+
+        k_sem_give(&contador);
+        
         local_count_t2++;
     }
 
@@ -119,13 +132,13 @@ void thread_report(void *p1, void *p2, void *p3)
 /* main cria as threads com mesma prioridade para maximizar competição */
 void main(void)
 {
-    printk("Demo Race Condition - iniciando\n");
+    printk("Demo Correção Race Condition - iniciando\n");
     printk("Cada thread fará %d incrementos.\n", INC_ITERATIONS);
 
     /* Criar thread 1 e 2 com mesma prioridade (teste de competição) */
     k_thread_create(&th_t1_data, stack_t1, K_THREAD_STACK_SIZEOF(stack_t1),
                     thread_inc1, NULL, NULL, NULL,
-                    5, 0, K_NO_WAIT);
+                    7, 0, K_NO_WAIT);
 
     k_thread_create(&th_t2_data, stack_t2, K_THREAD_STACK_SIZEOF(stack_t2),
                     thread_inc2, NULL, NULL, NULL,

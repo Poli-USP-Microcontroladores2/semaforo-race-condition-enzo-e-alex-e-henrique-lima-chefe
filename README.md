@@ -1,60 +1,31 @@
-# PSI-Microcontroladores2-Aula06
-Atividade: Resolução de Race Condition com Semáforo
+## Nome dos integrantes
+- Alexander Oliveira
+- Enzo Shinzato
+- Henrique Lima
 
-## 🎯 Objetivos da Atividade
-Nesta atividade, os alunos deverão:
-- Retomar o código gerado por IA em atividade anterior que apresenta **condições de corrida (race conditions)**.
-- Trabalhar em **duplas ou trios**, com **avaliação cruzada interna** entre os integrantes do grupo.
-- Aplicar **testes estruturados** com pré-condição, etapas de teste e pós-condição.
-- Demonstrar como o problema de concorrência foi **identificado e resolvido** com uso de semáforo.
+## Cenário Escolhido
+O cenário escolhido foi o programa implementado pelo Henrique Lima.
 
-## 🧠 Etapas da Atividade
-
-### **1️⃣ Revisão do Código Anterior**
-- Cada integrante do grupo deverá **executar o código do colega** que contém a race condition original.
-- Documentar:
-  - O comportamento incorreto observado.
-  - O momento em que o erro ocorre (condição específica, sequência de eventos, etc.).
-
-### **2️⃣ Planejamento de Testes**
-Para cada cenário, descreva **três casos de teste** seguindo o formato abaixo:
-
+## Casos de Teste
 | Caso de Teste | Pré-condição | Etapas de Teste | Pós-condição Esperada |
 |----------------|---------------|------------------|------------------------|
-| 1 | ... | ... | ... |
-| 2 | ... | ... | ... |
-| 3 | ... | ... | ... |
+| 1: Concorrência Simples de Incremento (threads com mesma prioridade) | 1. Variável global shared_counter = 0. 2. Thread inc1 e inc2 criadas para rodar a função de incremento (loop de 100.000). 3. Thread report criada para imprimir o resultado. 4. O k_yield() está ativo no código. | 1. Iniciar a execução das threads inc1 e inc2 (com mesma prioridade para forçar concorrência). 2. Aguardar ambas terminem seus loops com interrupção do k_yield(). 3. Sinalizar para a thread report imprimir o valor final de shared_counter no monitor serial. | O valor esperado é de 200.000 porém devido a condição de race condition o valor obtido é de 100.000 |
+| 2: Concorrência Simples de Incremento (threads com diferentes prioridades) | 1. Variável global shared_counter = 0. 2. Thread inc1(menor prioridade) e inc2(maior prioridade) criadas para rodar a função de incremento (loop de 100.000). 3. Thread report criada para imprimir o resultado. 4. O k_yield() está ativo no código. | 1. Iniciar a execução das threads inc1 e inc2 (com mesma prioridade para forçar concorrência). 2. Aguardar ambas terminem seus loops com interrupção do k_yield(). 3. Sinalizar para a thread report imprimir o valor final de shared_counter no monitor serial. | O valor esperado é de 200.000. Como não ha concorrência pela CPU as duas threads executam suas tarefas devidamente sem interrupções |
+| 3: Concorrência Simples de Incremento com Mutex | 1. Variável global shared_counter = 0. 2. Thread inc1 e inc2 criadas para rodar a função de incremento (loop de 100.000). 3. Implementação do mutex nas seções crítcas das threads inc1 e inc2. 3. Thread report criada para imprimir o resultado. 4. O k_yield() está ativo no código. | 1. Iniciar a execução das threads inc1 e inc2 (com mesma prioridade para forçar concorrência). 2. Verificar a interrupção da inc2 pelo mutex. 3. Aguardar ambas terminem seus loops com interrupção do k_yield(). 4. Sinalizar para a thread report imprimir o valor final de shared_counter no monitor serial. | O valor esperado é de 200.000 |
 
-### **3️⃣ Correção e Reteste**
-- Corrigir o código para **eliminar a race condition**.
-- Reexecutar **os mesmos casos de teste** e registrar:
-  - As mudanças feitas.
-  - O resultado após a correção com evidências (capturas de tela por exemplo).
+## Descrição da Race Condition
+No código fornecido pelo meu colega,  o seu programa cria 3 threads, sendo 2 responsáveis por gerenciar uma variável global, simulando uma espécie de contador, e a outra atribui-se o papel de imprimir os valores no monitor serial. O problema de race condition ocorre quando, durante a execução do contador da primeira thread, antes de atribuir o valor contado à variável global, ela é liberada para a segunda thread fazer sua contagem, assim não é somada a variável global o valor do contador da mesma, pois ao retornar a primeira thread ela subscrever o valor dela à variável global.
 
-### **4️⃣ Avaliação Interna (entre colegas do mesmo grupo)**
-Cada integrante deverá:
-1. Executar o código original do colega conforme os testes planejados.
-2. Executar o código corrigido do colega conforme os testes planejados.
-3. Conferir se as condições de corrida foram eliminadas.  
-4. Registrar uma **avaliação curta** (pode ser no final do README):
-   - O que estava errado antes.  
-   - O que mudou com a correção.
-   - Se o comportamento agora é estável.  
+## Descrição da Solução
+Uma possível resolução desse problema é usar um semáforo exclusivo na seção crítica do código, então quando executarmos a função da thread 1, e ela for liberada antes de atribuir o valor à variável global, a thread 2 será suspensa até a thread 1 terminar a sua execução. Assim que for concluída, o sistema operacional liberará a segunda thread que será executada, resultando, no final, o valor correto da variável global.
 
-## 📦 Entregáveis
+## Evidências
+As imagens abaixo evidenciam a correção do problema.
 
-No repositório do grupo, incluir:
-1. `README.md` (este arquivo) contendo:
-   - Nome dos integrantes.
-   - Cenário escolhido.
-   - Casos de teste.
-   - Descrição da race condition e da solução.
-   - Avaliação de cada colega.
-2. Código-fonte organizado (considerando um código original e um corrigido por cada integrante):
-   - `codigo_original/`
-   - `codigo_corrigido/`
-3. Evidências (prints, logs, vídeos curtos, etc.) da execução dos testes.
+- Race Condition: 
+![Monitor Serial do Erro](evidencias/Erro.png)
 
----
+- Correção do Race Condition:
+![Monitor Serial da Correção](evidencias/Corrigido.png)
 
-**Repositório:** entregue via GitHub Classroom (um repositório por grupo) e um PDF do markdown final no Moodle.
+## Avaliação Colega
