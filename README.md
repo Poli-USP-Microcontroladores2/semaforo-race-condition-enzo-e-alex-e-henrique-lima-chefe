@@ -21,29 +21,29 @@ Pela descrição do funcionamento do código, é possível entender que a inten�
 O código força uma race condition ao criar duas threads de mesma prioridade competindo pelo acesso a uma mesma variável global. Ao utilizar o comando k_yield() antes do registro do incremento da variavel global pela thread que estava sendo executada, a outra thread passa a executar e incrementar baseado no valor inicial (não incrementado) da variável global. O resultado é uma inconsistência do resultado contado da variável pelas duas threads e pelo resultado esperado (o que é sinalizado pelo LED vermelho).
 Ao executar o código no primeiro caso de teste, obtém-se o seguinte output no terminal:
 
-![Imagem 1: Output do código não corrigido no caso de teste 1](evidencias_enzo\print_1.png)
+![Imagem 1: Output do código não corrigido no caso de teste 1](evidencias_enzo/print_1.png)
 
 Na execução do código no segundo caso de teste, obtém-se o seguinte output:
 
-![Imagem 2: Output do código não corrigido no caso de teste 2](evidencias_enzo\print_2.png)
+![Imagem 2: Output do código não corrigido no caso de teste 2](evidencias_enzo/print_2.png)
 
 Na execução do código no terceiro caso de teste, obtém-se o seguinte output:
 
-![Imagem 3: Output do código não corrigido no caso de teste 3](evidencias_enzo\print_3.png)
+![Imagem 3: Output do código não corrigido no caso de teste 3](evidencias_enzo/print_3.png)
 
 ## **Descrição da solução**
 Uma solução possível para evitar a race condition inerente do código é utilizar um mutex, implementado no zephyr a partir das funções k_mutex_lock() e da função k_mutex_unlock(). Primeiro um mutex é definido estaticamente através da função K_MUTEX_DEFINE(). Depois, na definição da função de incremento das threads é adicionado no início uma função k_mutex_lock(), delimitando a execução seguinte como uma região crítica, e então colocando o k_mutex_unlock() para liberar a região crítica de execução. Isso resolve o race condition pois condiciona a finalização da execução completa da função da thread inicial antes que a outra possa ser inicializada, viabilizando a leitura correta do valor incrementado da variável após execução da thread original.
 Ao executar o código no primeiro caso de teste, obtém-se o seguinte output no terminal:
 
-![Imagem 1: Output do código corrigido no caso de teste 1](evidencias_enzo\print_4.png)
+![Imagem 1: Output do código corrigido no caso de teste 1](evidencias_enzo/print_4.png)
 
 Na execução do código no segundo caso de teste, obtém-se o seguinte output:
 
-![Imagem 2: Output do código corrigido no caso de teste 2](evidencias_enzo\print_5.png)
+![Imagem 2: Output do código corrigido no caso de teste 2](evidencias_enzo/print_5.png)
 
 Na execução do código no terceiro caso de teste, obtém-se o seguinte output:
 
-![Imagem 3: Output do código corrigido no caso de teste 3](evidencias_enzo\print_6.png)
+![Imagem 3: Output do código corrigido no caso de teste 3](evidencias_enzo/print_6.png)
 
 ## **Avaliação do colega**
 
