@@ -5,6 +5,8 @@
 /* --- Configuração da Simulação --- */
 #define INCREMENTS_PER_THREAD 1000 // Pode diminuir para 10000 para ser mais rápido
 
+K_MUTEX_DEFINE(counter_mutex);
+
 /* --- Configuração do Hardware (LEDs via DeviceTree) --- */
 #define LED_RED_NODE    DT_ALIAS(led2)
 #define LED_GREEN_NODE  DT_ALIAS(led0)
@@ -33,6 +35,7 @@ struct k_thread thread2_data;
 void increment_task(void *p1, void *p2, void *p3)
 {
     for (int i = 0; i < INCREMENTS_PER_THREAD; ++i) {
+        k_mutex_lock(&counter_mutex, K_FOREVER);
         // --- SEÇÃO CRÍTICA VULNERÁVEL ---
 
         // 1. Uma thread lê o valor compartilhado para uma cópia local.
@@ -50,6 +53,7 @@ void increment_task(void *p1, void *p2, void *p3)
         // 4. Ela finalmente escreve o valor de volta, mas o incremento da
         //    outra thread será perdido, pois ela também leu o valor antigo.
         shared_counter = local_copy;
+        k_mutex_unlock(&counter_mutex);
     }
 }
 
