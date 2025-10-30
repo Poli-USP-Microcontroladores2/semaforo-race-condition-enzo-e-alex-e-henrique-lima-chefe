@@ -23,3 +23,9 @@ Afim de sanar a race condition do presente código implementei o uso de mutex pa
 
 ## Conclusão quanto ao código do Alexander:
 O experimento mostrou que partilhar recursos críticos( a variável global, por exemplo) com a ausência de um mecanismo de controle no acesso leva a inconsistências, como foi demonstrado. A aplicação de mutex como mecanismo de sincronização garantiu a integridade dos dados e a previsibilidade da execução, eliminando assim, a race condition observada.
+
+
+## Avaliação do colega
+- Avaliação realizada por Alexander Oliveira
+
+O código antes da correção fazia a contagem errada de uma variável pro conta de uma race condition de variaveis concorrentes de mesma prioridade. Depois da correção a partir da implementação do mutex, o código se tornou estável e deixou de fazer a contagem errada da variável, eliminando a race condition.
