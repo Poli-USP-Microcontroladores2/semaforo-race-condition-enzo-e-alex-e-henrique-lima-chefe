@@ -138,7 +138,7 @@ void main(void)
     /* Criar thread 1 e 2 com mesma prioridade (teste de competição) */
     k_thread_create(&th_t1_data, stack_t1, K_THREAD_STACK_SIZEOF(stack_t1),
                     thread_inc1, NULL, NULL, NULL,
-                    7, 0, K_NO_WAIT);
+                    5, 0, K_NO_WAIT);
 
     k_thread_create(&th_t2_data, stack_t2, K_THREAD_STACK_SIZEOF(stack_t2),
                     thread_inc2, NULL, NULL, NULL,
