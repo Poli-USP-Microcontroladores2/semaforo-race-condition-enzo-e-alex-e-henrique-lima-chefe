@@ -1,0 +1,29 @@
+name: Gerar PDF do Markdown
+
+on:
+  workflow_dispatch:  # Permite rodar manualmente
+  push:
+    branches: [ "main" ]  # ou altere para o branch principal do seu repositório
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clonar repositório
+        uses: actions/checkout@v4
+
+      - name: Instalar Pandoc e LaTeX básico
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc texlive-xetex texlive-fonts-recommended texlive-plain-generic
+
+      - name: Converter Markdown em PDF
+        run: |
+          pandoc README.md -o saida.pdf --pdf-engine=xelatex --resource-path=.:./imagens
+
+      - name: Publicar PDF como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: PDF-Gerado
+          path: saida.pdf
