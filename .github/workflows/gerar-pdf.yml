@@ -3,7 +3,7 @@ name: Gerar PDF do Markdown
 on:
   workflow_dispatch:  # Permite rodar manualmente
   push:
-    branches: [ "main" ]  # ou altere para o branch principal do seu repositório
+    branches: [ "enzo" ]  # ou altere para o branch principal do seu repositório
 
 jobs:
   build:
