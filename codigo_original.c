@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 /* --- Configuração da Simulação --- */
-#define INCREMENTS_PER_THREAD 1000 // Pode diminuir para 10000 para ser mais rápido
+#define INCREMENTS_PER_THREAD 100000 // Pode diminuir para 10000 para ser mais rápido
 
 /* --- Configuração do Hardware (LEDs via DeviceTree) --- */
 #define LED_RED_NODE    DT_ALIAS(led2)

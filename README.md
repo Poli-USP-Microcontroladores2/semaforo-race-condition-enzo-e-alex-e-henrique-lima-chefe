@@ -1,60 +1,39 @@
-# PSI-Microcontroladores2-Aula06
-Atividade: Resolução de Race Condition com Semáforo
+# **Relatório: Código do Enzo Shinzato**
 
-## 🎯 Objetivos da Atividade
-Nesta atividade, os alunos deverão:
-- Retomar o código gerado por IA em atividade anterior que apresenta **condições de corrida (race conditions)**.
-- Trabalhar em **duplas ou trios**, com **avaliação cruzada interna** entre os integrantes do grupo.
-- Aplicar **testes estruturados** com pré-condição, etapas de teste e pós-condição.
-- Demonstrar como o problema de concorrência foi **identificado e resolvido** com uso de semáforo.
+**Nome dos integrantes:**
+- Alexander Oliveira.
+- Enzo Shinzato.
+- Henrique Lima.
 
-## 🧠 Etapas da Atividade
+## **Avaliação inicial do cenário inicial**
+Pela descrição do funcionamento do código, é possível entender que a intenção do código é criar duas threads concorrentes de mesma prioridade que incrementam uma mesma variável. Ao final dos incrementos o código compara o valor contado para a variável de incremento e compara com o valor esperado. Se forem iguais, não houve erros de race condition e a placa acende o LED verde. Se os valores forem diferentes, o LED vermelho acende, sinalizando uma falha na contagem da variável ocasionada por uma race condition.
 
-### **1️⃣ Revisão do Código Anterior**
-- Cada integrante do grupo deverá **executar o código do colega** que contém a race condition original.
-- Documentar:
-  - O comportamento incorreto observado.
-  - O momento em que o erro ocorre (condição específica, sequência de eventos, etc.).
 
-### **2️⃣ Planejamento de Testes**
-Para cada cenário, descreva **três casos de teste** seguindo o formato abaixo:
-
+## **Casos de teste**
 | Caso de Teste | Pré-condição | Etapas de Teste | Pós-condição Esperada |
 |----------------|---------------|------------------|------------------------|
-| 1 | ... | ... | ... |
-| 2 | ... | ... | ... |
-| 3 | ... | ... | ... |
+| 1. Execução concorrente com troca de contexto forçada | 2 Threads concorrentes de prioridade 7 que incrementam uma variável global em um valor de 100000 e possuem uma função k_yield() antes do registro do incremento. | 1. As duas threads começam a incrementar shared_counter simultaneamente.<br>2. A execução termina e o valor final é exibido no console. | O valor final de shared_counter é menor que 200000, indicando perda de incrementos devido à condição de corrida. O LED vermelho é aceso. |
+| 2. Execução concorrente de threads com atraso intencional | 2 Threads concorrentes de prioridade 7, que incrementam uma variável global em um valor de 100000 e possuem uma função k_busy_wait() antes do registro do incremento. | 1. As duas threads começam a incrementar shared_counter simultaneamente.<br>2. A execução termina e o valor final é exibido no console. | O valor final de shared_counter é menor que 200000, indicando perda de incrementos devido à condição de corrida. O LED vermelho é aceso. |
+| 3. Execução Concorrente com troca de contexto forçada (carga menor) | 2 Threads concorrentes de prioridade 7 que incrementam uma variável global em um valor de 1000 e possuem uma função k_yield() antes do registro do incremento. | 1. As duas threads começam a incrementar shared_counter simultaneamente.<br>2. A execução termina e o valor final é exibido no console. | O valor final de shared_counter é menor que 2000, indicando perda de incrementos devido à condição de corrida. O LED vermelho é aceso. |
 
-### **3️⃣ Correção e Reteste**
-- Corrigir o código para **eliminar a race condition**.
-- Reexecutar **os mesmos casos de teste** e registrar:
-  - As mudanças feitas.
-  - O resultado após a correção com evidências (capturas de tela por exemplo).
 
-### **4️⃣ Avaliação Interna (entre colegas do mesmo grupo)**
-Cada integrante deverá:
-1. Executar o código original do colega conforme os testes planejados.
-2. Executar o código corrigido do colega conforme os testes planejados.
-3. Conferir se as condições de corrida foram eliminadas.  
-4. Registrar uma **avaliação curta** (pode ser no final do README):
-   - O que estava errado antes.  
-   - O que mudou com a correção.
-   - Se o comportamento agora é estável.  
+## **Descrição da race condition**
+O código força uma race condition ao criar duas threads de mesma prioridade competindo pelo acesso a uma mesma variável global. Ao utilizar o comando k_yield() antes do registro do incremento da variavel global pela thread que estava sendo executada, a outra thread passa a executar e incrementar baseado no valor inicial (não incrementado) da variável global. O resultado é uma inconsistência do resultado contado da variável pelas duas threads e pelo resultado esperado (o que é sinalizado pelo LED vermelho).
+Ao executar o código no primeiro caso de teste, obtém-se o seguinte output no terminal:
 
-## 📦 Entregáveis
+![Imagem 1: Output do código não corrigido no caso de teste 1](C:\Users\alexa\Pictures\Screenshots/Captura de tela 2025-10-30 011053.png)
 
-No repositório do grupo, incluir:
-1. `README.md` (este arquivo) contendo:
-   - Nome dos integrantes.
-   - Cenário escolhido.
-   - Casos de teste.
-   - Descrição da race condition e da solução.
-   - Avaliação de cada colega.
-2. Código-fonte organizado (considerando um código original e um corrigido por cada integrante):
-   - `codigo_original/`
-   - `codigo_corrigido/`
-3. Evidências (prints, logs, vídeos curtos, etc.) da execução dos testes.
+Na execução do código no segundo caso de teste, obtém-se o seguinte output:
 
----
+![Imagem 2: Output do código não corrigido no caso de teste 2](C:\Users\alexa\Pictures\Screenshots/Captura de tela 2025-10-30 015910.png)
 
-**Repositório:** entregue via GitHub Classroom (um repositório por grupo) e um PDF do markdown final no Moodle.
+Na execução do código no terceiro caso de teste, obtém-se o seguinte output:
+
+![Imagem 2: Output do código não corrigido no caso de teste 2](C:\Users\alexa\Pictures\Screenshots/Captura de tela 2025-10-30 020412.png)
+
+## **Descrição da solução**
+
+
+## **Avaliação do colega**
+
+
